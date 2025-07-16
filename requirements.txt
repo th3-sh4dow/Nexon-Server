@@ -13,3 +13,4 @@ googlesearch-python
 AppOpener
 deep-translator
 aiohttp
+python-Levenshtein
