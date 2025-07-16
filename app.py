@@ -6,6 +6,10 @@ from difflib import get_close_matches
 import asyncio
 
 app = Flask(__name__)
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Nexon Server is running. Use /ask to interact."})
+
 
 @app.route("/connect", methods=["GET"])
 def connect_test():
