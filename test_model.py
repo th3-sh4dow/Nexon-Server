@@ -8,7 +8,8 @@ from dotenv import dotenv_values
 import spacy
 from fuzzywuzzy import process
 import re
-from googletrans import Translator
+from deep_translator import GoogleTranslator
+
 import asyncio
 import aiohttp
 from groq import Groq
@@ -30,7 +31,8 @@ youtube = build('youtube', 'v3', developerKey=YouTubeAPIKey) if YouTubeAPIKey el
 # Load NLP models
 nlp_en = spacy.load("en_core_web_sm")
 nlp_multi = spacy.load("xx_ent_wiki_sm")
-translator = Translator()
+translator = GoogleTranslator(source='auto', target='en')
+
 
 # Supported Automation Tasks
 AutomationTypes = ["open", "close", "play", "system", "content", "google search", "youtube search", "code"]
@@ -45,14 +47,12 @@ MUSIC_APPS = {
 
 async def translate_to_english(query):
     try:
-        detected = await asyncio.to_thread(translator.detect, query)
-        if detected.lang != "en":
-            translated = await asyncio.to_thread(translator.translate, query, dest="en")
-            return translated.text
-        return query
+        translated = await asyncio.to_thread(translator.translate, query)
+        return translated
     except Exception as e:
         print(f"[ERROR] Translation failed: {e}")
         return query
+
 
 
 def clean_query(query, music_app=None):
