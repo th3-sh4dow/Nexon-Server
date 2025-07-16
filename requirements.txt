@@ -1,7 +1,7 @@
 Flask==2.3.2
 python-dotenv
 cohere
-groq==0.30.0
+groq==0.28.0
 google-api-python-client
 beautifulsoup4
 pywhatkit
@@ -9,7 +9,6 @@ requests
 rich
 spacy
 fuzzywuzzy
-googletrans==4.0.0rc1
-AppOpener
 googlesearch-python
-
+AppOpener
+deep-translator
