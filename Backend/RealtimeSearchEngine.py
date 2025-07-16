@@ -11,7 +11,8 @@ Assistantname = env_vars.get("Assistantname")
 GroqAPIKey = env_vars.get("GroqAPIKey")
 
 # Initialize Groq client
-client = Groq(api_key=GroqAPIKey)
+
+client = Groq()  # will automatically use GROQ_API_KEY from environment
 
 System = f"""Hello, I am {Username}, You are a very accurate and advanced AI chatbot named {Assistantname} which has real-time up-to-date information from the internet.
 *** Provide Answers In a Professional Way, make sure to add full stops, commas, question marks, and use proper grammar.***
