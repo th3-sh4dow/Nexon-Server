@@ -13,3 +13,4 @@ googlesearch-python
 deep-translator
 aiohttp
 python-Levenshtein
+gunicorn
