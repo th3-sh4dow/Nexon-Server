@@ -7,7 +7,8 @@ import random
 env_vars = dotenv_values(".env")
 CohereAPIKey = env_vars.get("CohereAPIKey")
 
-co = cohere.Client(api_key=CohereAPIKey)
+co = cohere.Client()  # Will automatically use CO_API_KEY
+
 
 # Define action keywords
 funcs = [
