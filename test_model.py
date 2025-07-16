@@ -29,8 +29,13 @@ groq_client = Groq(api_key=GroqAPIKey)
 youtube = build('youtube', 'v3', developerKey=YouTubeAPIKey) if YouTubeAPIKey else None
 
 # Load NLP models
-nlp_en = spacy.load("en_core_web_sm")
-nlp_multi = spacy.load("xx_ent_wiki_sm")
+import spacy
+
+def load_nlp_model():
+    return spacy.load("en_core_web_sm")
+
+def load_multilang_model():     
+    return spacy.load("xx_ent_wiki_sm")
 translator = GoogleTranslator(source='auto', target='en')
 
 
