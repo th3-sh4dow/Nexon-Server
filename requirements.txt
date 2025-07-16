@@ -10,7 +10,6 @@ rich
 spacy
 fuzzywuzzy
 googlesearch-python
-AppOpener
 deep-translator
 aiohttp
 python-Levenshtein
