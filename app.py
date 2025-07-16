@@ -89,6 +89,4 @@ def ask_jarvis():
     print("[DEBUG] Returning:", response_data)
     return jsonify(response_data), 200
 
-if __name__ == "__main__":
-    print("[INFO] Starting Flask server on http://0.0.0.0:5000 ...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+
