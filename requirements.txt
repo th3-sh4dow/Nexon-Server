@@ -1,0 +1,13 @@
+Flask==2.3.2
+python-dotenv
+cohere
+groq
+google-api-python-client
+beautifulsoup4
+pywhatkit
+requests
+rich
+spacy
+fuzzywuzzy
+googletrans==4.0.0rc1
+AppOpener
