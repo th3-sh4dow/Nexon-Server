@@ -3,6 +3,7 @@ from groq import Groq
 from json import load, dump
 import datetime
 from dotenv import dotenv_values
+import os
 
 # Load environment variables
 env_vars = dotenv_values(".env")
@@ -12,7 +13,9 @@ GroqAPIKey = env_vars.get("GroqAPIKey")
 
 # Initialize Groq client
 
-client = Groq()  # will automatically use GROQ_API_KEY from environment
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 
 System = f"""Hello, I am {Username}, You are a very accurate and advanced AI chatbot named {Assistantname} which has real-time up-to-date information from the internet.
 *** Provide Answers In a Professional Way, make sure to add full stops, commas, question marks, and use proper grammar.***
