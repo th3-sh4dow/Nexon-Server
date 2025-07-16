@@ -8,11 +8,11 @@ import asyncio
 app = Flask(__name__)
 
 @app.route("/connect", methods=["GET"])
-async def connect_test():
+def connect_test():
     return jsonify({"status": "connected"}), 200
 
 @app.route("/device_apps", methods=["POST"])
-async def receive_device_apps():
+def receive_device_apps():
     device_id = request.args.get("device_id")
     if not device_id:
         return jsonify({"error": "Missing device_id"}), 400
@@ -27,7 +27,7 @@ async def receive_device_apps():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/get_device_apps/<device_id>', methods=['GET'])
-async def get_device_apps(device_id):
+def get_device_apps(device_id):
     try:
         with open(f"device_apps/{device_id}.json", "r") as f:
             return jsonify(json.load(f))
@@ -55,7 +55,7 @@ def find_best_app_match(spoken_cmd, device_id):
     return None
 
 @app.route("/ask", methods=["POST"])
-async def ask_jarvis():
+def ask_jarvis():
     data = request.get_json()
     if not data or 'query' not in data:
         return jsonify({"error": "Missing 'query'"}), 400
@@ -76,7 +76,11 @@ async def ask_jarvis():
         return jsonify(response_data), 200
 
     # Fallback to MainExecution
-    final_output, device_action = await MainExecution(query, device_id)
+    try:
+        final_output, device_action = asyncio.run(MainExecution(query, device_id))
+    except Exception as e:
+        return jsonify({"error": f"Internal error during execution: {e}"}), 500
+
     print("[DEBUG] device_action returned from MainExecution:", device_action)
     response_data = {
         "tts_text": device_action.get("tts_text", final_output or "Done."),
@@ -87,5 +91,4 @@ async def ask_jarvis():
 
 if __name__ == "__main__":
     print("[INFO] Starting Flask server on http://0.0.0.0:5000 ...")
-    from asyncio import run
     app.run(host="0.0.0.0", port=5000, debug=True)
