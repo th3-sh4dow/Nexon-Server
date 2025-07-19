@@ -1,24 +1,10 @@
-import cohere
-from rich import print
-from dotenv import dotenv_values
-import random
+#!/usr/bin/env python3
+"""
+Enhanced Nova AI - Concept Demonstration
+Shows the intelligent command processing concept without external dependencies
+"""
+
 import re
-import spacy
-from fuzzywuzzy import process
-from datetime import datetime
-import json
-
-# Load environment variables
-env_vars = dotenv_values(".env")
-CohereAPIKey = env_vars.get("CohereAPIKey")
-
-co = cohere.Client()  # Will automatically use CO_API_KEY
-
-# Load NLP model for better understanding
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    nlp = None
 
 # ==================== COMMAND CATEGORIES & PATTERNS ====================
 
@@ -41,28 +27,6 @@ APP_COMMANDS = {
     "delete": "app_delete",
     "lock": "app_lock",
     "unlock": "app_unlock"
-}
-
-# Media Commands
-MEDIA_COMMANDS = {
-    "capture photo": "media_capture_photo",
-    "take screenshot": "media_screenshot",
-    "record video": "media_record_video",
-    "change camera": "media_change_camera",
-    "skip 5 sec": "media_skip_5sec",
-    "play song": "media_play_song",
-    "play": "media_play_song",
-    "play spotify": "media_play_spotify",
-    "change song": "media_change_song",
-    "stop recording": "media_stop_recording"
-}
-
-# Communication Commands
-COMMS_COMMANDS = {
-    "call": "comms_call",
-    "video call": "comms_video_call",
-    "send whatsapp": "comms_whatsapp",
-    "send sms": "comms_sms"
 }
 
 # Device Commands with percentage/level support
@@ -168,7 +132,7 @@ def extract_number(text):
     return int(matches[0]) if matches else None
 
 def extract_app_name(text):
-    """Extract app name from text using fuzzy matching"""
+    """Extract app name from text using simple matching"""
     common_apps = [
         "whatsapp", "telegram", "instagram", "facebook", "twitter", "youtube", 
         "spotify", "chrome", "gmail", "camera", "gallery", "settings", "calculator",
@@ -176,8 +140,10 @@ def extract_app_name(text):
     ]
     
     text_lower = text.lower()
-    best_match = process.extractOne(text_lower, common_apps)
-    return best_match[0] if best_match and best_match[1] > 70 else None
+    for app in common_apps:
+        if app in text_lower:
+            return app
+    return None
 
 def extract_contact_name(text):
     """Extract contact name from text"""
@@ -190,28 +156,11 @@ def extract_contact_name(text):
 
 def extract_song_name(text):
     """Extract song name from text"""
-    text_lower = text.lower()
-    
-    # Handle "play a song name [song]" format
-    if "play a song name" in text_lower:
-        song_start = text_lower.find("play a song name") + len("play a song name")
-        song_text = text[song_start:].strip()
-        # Remove any trailing words like "and set volume"
-        if " and " in song_text:
-            song_text = song_text.split(" and ")[0].strip()
-        return song_text
-    
-    # Handle regular "play [song]" format
     prefixes = ["play", "play song", "play music"]
     for prefix in prefixes:
-        if text_lower.startswith(prefix):
-            song_text = text[len(prefix):].strip()
-            # Remove any trailing words like "and set volume"
-            if " and " in song_text:
-                song_text = song_text.split(" and ")[0].strip()
-            return song_text
-    
-    return None
+        if text.lower().startswith(prefix):
+            return text[len(prefix):].strip()
+    return text.strip()
 
 def extract_search_query(text):
     """Extract search query from text"""
@@ -227,19 +176,6 @@ def process_volume_command(text):
     """Process volume commands with percentage/level support"""
     text_lower = text.lower()
     
-    # Handle "set volume into X%" format
-    if "set volume into" in text_lower or "set volum into" in text_lower:
-        percentage = extract_percentage(text)
-        number = extract_number(text)
-        
-        if percentage:
-            return f"device_volume::{percentage}%"
-        elif number:
-            return f"device_volume::{number}%"
-        else:
-            return "device_volume::50%"  # Default
-    
-    # Handle "volume down/up X%" format
     if "volume down" in text_lower or "volume up" in text_lower:
         percentage = extract_percentage(text)
         number = extract_number(text)
@@ -290,7 +226,20 @@ def process_media_command(text):
     """Process media commands"""
     text_lower = text.lower()
     
-    for action, command_type in MEDIA_COMMANDS.items():
+    media_actions = {
+        "capture photo": "media_capture_photo",
+        "take screenshot": "media_screenshot",
+        "record video": "media_record_video",
+        "change camera": "media_change_camera",
+        "skip 5 sec": "media_skip_5sec",
+        "play song": "media_play_song",
+        "play": "media_play_song",
+        "play spotify": "media_play_spotify",
+        "change song": "media_change_song",
+        "stop recording": "media_stop_recording"
+    }
+    
+    for action, command_type in media_actions.items():
         if action in text_lower:
             if "play" in action:
                 song_name = extract_song_name(text)
@@ -304,7 +253,14 @@ def process_comms_command(text):
     """Process communication commands"""
     text_lower = text.lower()
     
-    for action, command_type in COMMS_COMMANDS.items():
+    comms_actions = {
+        "call": "comms_call",
+        "video call": "comms_video_call",
+        "send whatsapp": "comms_whatsapp",
+        "send sms": "comms_sms"
+    }
+    
+    for action, command_type in comms_actions.items():
         if action in text_lower:
             contact = extract_contact_name(text)
             if contact:
@@ -413,30 +369,6 @@ def extract_structured_command(prompt: str):
     
     return None
 
-def extract_all_structured_commands(prompt: str):
-    """Extract ALL structured commands from a prompt"""
-    
-    # Try each command category
-    command_processors = [
-        process_core_command,
-        process_app_command,
-        process_media_command,
-        process_comms_command,
-        process_device_command,
-        process_pc_command,
-        process_smart_command
-    ]
-    
-    all_results = []
-    
-    for processor in command_processors:
-        result = processor(prompt)
-        if result:
-            print(f"[DEBUG] Extracted command: {result}")
-            all_results.append(result)
-    
-    return all_results
-
 def process_multiple_commands(prompt: str):
     """Process multiple commands in a single query"""
     # Split the prompt into multiple commands
@@ -446,21 +378,14 @@ def process_multiple_commands(prompt: str):
     
     for cmd in individual_commands:
         if cmd.strip():
-            # Try to extract all possible commands from this part
-            results = extract_all_structured_commands(cmd.strip())
-            if results:
-                all_results.extend(results)
+            result = extract_structured_command(cmd.strip())
+            if result:
+                all_results.append(result)
             else:
                 # If no structured command found, treat as general
                 all_results.append(f"general {cmd.strip()}")
     
-    # Only return multiple results if we found more than one command
-    if len(all_results) > 1:
-        return all_results
-    elif len(all_results) == 1:
-        return all_results
-    else:
-        return None
+    return all_results
 
 # ==================== MAIN INTELLIGENT PROCESSING FUNCTION ====================
 
@@ -470,10 +395,6 @@ def FirstLayerDMM(prompt: str = "test"):
     Handles multiple commands in a single query
     """
     print(f"[DEBUG] Processing query: {prompt}")
-    
-    # Check for ownership queries first
-    if is_ownership_query(prompt):
-        return handle_ownership_query(prompt)
     
     # Process multiple commands
     multiple_results = process_multiple_commands(prompt)
@@ -487,120 +408,178 @@ def FirstLayerDMM(prompt: str = "test"):
     if structured_command:
         return [structured_command]
     
-    # Fallback to Cohere for complex queries
-    return fallback_to_cohere(prompt)
+    # Fallback to general response
+    return ["general " + prompt]
 
-def handle_ownership_query(prompt: str):
-    """Handle ownership-related queries"""
-    ownership_preamble = """
-    You are a professional AI assistant designed to explain your own origin in a respectful and intelligent way. 
-    If someone asks questions like "who made you", "who built you", "who developed you", or similar, 
-    you should respond by naturally describing your creator.
+# ==================== DEMONSTRATION ====================
 
-    Here's how you should describe yourself:
+def print_header():
+    """Print the demo header"""
+    print("🤖" + "="*60 + "🤖")
+    print("🚀 ENHANCED NEXON AI - INTELLIGENT COMMAND PROCESSING")
+    print("🤖" + "="*60 + "🤖")
+    print("\n🎯 This demo shows how Nexon AI understands and processes:")
+    print("   • Core system commands")
+    print("   • App management commands")
+    print("   • Media control commands")
+    print("   • Device control with percentages")
+    print("   • PC automation commands")
+    print("   • Smart AI commands")
+    print("   • Complex multi-intent queries")
+    print("   • Hindi language support")
+    print("\n💡 Try commands like:")
+    print("   • 'nexon volume down 30%'")
+    print("   • 'set brightness to 75%'")
+    print("   • 'open whatsapp and call mom'")
+    print("   • 'play despacito and take screenshot'")
+    print("   • 'shutdown pc and lock phone'")
+    print("\n" + "="*62)
 
-    "I was proudly built by Bicky Muduli, also known as Sh4dow. He is a highly skilled software developer, 
-    ethical hacker, and cybersecurity expert. He specializes in penetration testing, secure development, 
-    OSINT, and automation systems. With a deep passion for technology and self-learning, Bicky created me 
-    as part of his mission to integrate artificial intelligence with practical real-world use cases. 
-    He believes in innovation, open learning, and empowering the cybersecurity community."
+def print_command_result(query, result):
+    """Print formatted command result"""
+    print(f"\n🔍 User Query: {query}")
+    print(f"📤 Nexon Response: {result}")
+    
+    # Show what the client device would receive
+    if result and isinstance(result, list):
+        for cmd in result:
+            if cmd.startswith(('app_', 'media_', 'device_', 'comms_', 'smart_')):
+                print(f"📱 Android Command: {cmd}")
+            elif cmd.startswith('pc_'):
+                print(f"🖥️  PC Command: {cmd}")
+            elif cmd.startswith('general '):
+                print(f"💬 General Response: {cmd}")
+    
+    print("-" * 50)
 
-    If the question is asked in an informal or funny way (like "who's your daddy?"), respond cleverly 
-    but still honor Bicky Muduli.
-    """
+def interactive_demo():
+    """Interactive demonstration mode"""
+    print_header()
     
-    stream = co.chat_stream(
-        model='command-r-plus',
-        message=prompt,
-        temperature=0.7,
-        chat_history=[],
-        prompt_truncation='OFF',
-        connectors=[],
-        preamble=ownership_preamble
-    )
+    print("\n🎮 INTERACTIVE MODE")
+    print("Type 'exit' to quit, 'help' for examples, 'demo' for auto-demo")
     
-    response = ""
-    for event in stream:
-        if event.event_type == "text-generation":
-            response += event.text
-    
-    return [f"general {response.strip()}"]
+    while True:
+        try:
+            user_input = input("\n👤 You → ").strip()
+            
+            if user_input.lower() in ['exit', 'quit', 'bye']:
+                print("👋 Goodbye! Thanks for trying Enhanced Nexon AI!")
+                break
+            
+            elif user_input.lower() == 'help':
+                print_help()
+                continue
+            
+            elif user_input.lower() == 'demo':
+                auto_demo()
+                continue
+            
+            elif not user_input:
+                continue
+            
+            # Process the command
+            result = FirstLayerDMM(user_input)
+            print_command_result(user_input, result)
+            
+        except KeyboardInterrupt:
+            print("\n\n👋 Demo interrupted. Goodbye!")
+            break
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            print("Please try again or type 'help' for examples.")
 
-def fallback_to_cohere(prompt: str):
-    """Fallback to Cohere for complex queries"""
+def print_help():
+    """Print help information"""
+    print("\n📚 COMMAND EXAMPLES:")
+    print("\n🎯 CORE COMMANDS:")
+    print("   • nexon")
+    print("   • your name")
+    print("   • how are you")
+    print("   • current version")
+    print("   • joke")
+    print("   • today's date")
+    print("   • tell me the time")
     
-    # Enhanced preamble with all command categories
-    enhanced_preamble = """
-    You are an advanced AI assistant that understands user intent and translates it into structured commands.
+    print("\n📱 APP COMMANDS:")
+    print("   • open whatsapp")
+    print("   • start telegram")
+    print("   • delete instagram")
+    print("   • lock facebook")
+    print("   • unlock twitter")
     
-    Available command categories:
+    print("\n🎵 MEDIA COMMANDS:")
+    print("   • capture photo")
+    print("   • take screenshot")
+    print("   • record video")
+    print("   • play despacito")
+    print("   • play spotify")
+    print("   • change song")
     
-    CORE: nexon, stop service, your name, how are you, current version, joke, today's date, tell me the time
-    APP: open [app], start [app], delete [app], lock [app], unlock [app]
-    MEDIA: capture photo, take screenshot, record video, change camera, skip 5 sec, play song, play spotify, change song, stop recording
-    COMMS: call [contact], video call [contact], send whatsapp [message], send sms [message]
-    DEVICE: battery percentage, turn on/off flashlight, turn on/off screen, back to home, set brightness [level], set reminder/alarm, remove water, turn on/off silent/wifi/bluetooth/mobile data, scroll up/down/left/right
-    PC: open [app] in pc, shutdown pc, restart pc, lock pc, volume up/down in pc, mute/unmute pc, minimize all, maximize window, close window/page, copy/paste, move upward/downward, turn on sleeping mode, capture photo in laptop, record in laptop, click on, type, send file to pc
-    SMART: today's news, weather report, current location, show me location of [person], translate mode, trouble, search [query], what is this, scan and explain, new notification, tell me about [topic]
+    print("\n📞 COMMUNICATION:")
+    print("   • call mom")
+    print("   • video call dad")
+    print("   • send whatsapp hello")
+    print("   • send sms urgent")
     
-    For volume/brightness commands, extract percentage values (e.g., "volume down 20%" → "volume::down::20%")
-    For app commands, extract app names (e.g., "open whatsapp" → "app_open::whatsapp")
-    For media commands, extract song names (e.g., "play despacito" → "media_play_song::despacito")
-    For search commands, extract search queries (e.g., "search python tutorials" → "smart_search::python tutorials")
+    print("\n⚙️ DEVICE CONTROL:")
+    print("   • battery percentage")
+    print("   • turn on flashlight")
+    print("   • set brightness 75%")
+    print("   • volume down 30%")
+    print("   • turn on wi-fi")
+    print("   • scroll up")
     
-    Respond with the most appropriate command format. If multiple actions are requested, separate them with commas.
-    """
+    print("\n🖥️ PC COMMANDS:")
+    print("   • open notepad in pc")
+    print("   • shutdown pc")
+    print("   • volume up in pc")
+    print("   • minimize all")
+    print("   • copy")
+    print("   • paste")
     
-    messages = [{"role": "user", "content": f"{prompt}"}]
-    stream = co.chat_stream(
-        model='command-r-plus',
-        message=prompt,
-        temperature=0.7,
-        chat_history=[],
-        prompt_truncation='OFF',
-        connectors=[],
-        preamble=enhanced_preamble
-    )
+    print("\n🧠 SMART COMMANDS:")
+    print("   • today's news")
+    print("   • weather report")
+    print("   • current location")
+    print("   • search python tutorials")
+    print("   • tell me about AI")
     
-    response = ""
-    for event in stream:
-        if event.event_type == "text-generation":
-            response += event.text
+    print("\n🔢 PERCENTAGE EXAMPLES:")
+    print("   • volume down 20%")
+    print("   • volume up 50%")
+    print("   • set brightness 75%")
+    print("   • volume down 15")
+    print("   • set brightness 90")
     
-    # Parse response into commands
-    commands = response.replace("\n", "").split(",")
-    commands = [cmd.strip() for cmd in commands if cmd.strip()]
+    print("\n🇮🇳 HINDI EXAMPLES:")
+    print("   • nexon volume kam karo 30%")
+    print("   • whatsapp kholo")
+    print("   • mummy ko call karo")
+    print("   • screenshot le lo")
     
-    if not commands:
-        return ["general " + prompt]
-    
-    return commands
+    print("\n🔄 COMPLEX QUERIES:")
+    print("   • nexon open whatsapp and play a song name ham mere safer and set volum into 90%")
+    print("   • call mom and send whatsapp message hello")
+    print("   • set brightness to 80% and take screenshot")
+    print("   • shutdown pc and lock phone")
 
-def is_ownership_query(prompt: str):
-    """Check if query is about ownership/creator"""
-    ownership_triggers = [
-        "who built you", "who made you", "who developed you", "who is your developer", "who created you",
-        "who is your creator", "who programmed you", "who is your founder", "who owns you", "your maker",
-        "who is the person behind you", "who is your builder", "developer of you", "coded you", "your owner",
-        "your father", "who is your father", "who is your daddy", "your papa", "papa", "daddy"
-    ]
-    
-    prompt_lower = prompt.lower()
-    return any(trigger in prompt_lower for trigger in ownership_triggers)
-
-# ==================== TESTING ====================
-
-if __name__ == "__main__":
-    print("🤖 Enhanced Nexon AI Model - Testing Mode")
+def auto_demo():
+    """Automatic demonstration with predefined examples"""
+    print("\n🎬 AUTO DEMONSTRATION MODE")
     print("=" * 50)
     
-    test_queries = [
+    demo_queries = [
         "nexon",
         "volume down 30%",
         "set brightness to 75%",
         "open whatsapp",
+        "call mom",
+        "play despacito",
+        "take screenshot",
+        "battery percentage",
+        "shutdown pc",
         "search python tutorials",
-        "who made you",
         # Multiple commands
         "nexon open whatsapp and play a song name ham mere safer and set volum into 90%",
         "call mom and send whatsapp message hello",
@@ -608,8 +587,18 @@ if __name__ == "__main__":
         "shutdown pc and lock phone"
     ]
     
-    for query in test_queries:
-        print(f"\n🔍 Query: {query}")
+    for i, query in enumerate(demo_queries, 1):
+        print(f"\n🎯 Demo {i}/{len(demo_queries)}")
         result = FirstLayerDMM(query)
-        print(f"📤 Result: {result}")
-        print("-" * 30)
+        print_command_result(query, result)
+        
+        if i < len(demo_queries):
+            print("\n⏳ Press Enter for next demo...")
+            input()
+
+def main():
+    """Main function"""
+    interactive_demo()
+
+if __name__ == "__main__":
+    main() 
